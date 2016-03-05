@@ -1,7 +1,10 @@
 package elevator;
 
+import java.util.*;
+
 import static elevator.ElevatorState.*;
 
+@SuppressWarnings("Duplicates")
 public class Elevator
 {
 	final int numFloors;
@@ -9,7 +12,8 @@ public class Elevator
 
 	ElevatorState elevatorState;
 	int currentFloor;
-	int destinationFloor;
+	Set<Integer> floorsToStopOn;
+	int numTrips = 0;
 
 	Monitor monitor;
 
@@ -21,9 +25,21 @@ public class Elevator
 		this.elevatorNumber = elevatorNumber;
 		this.monitor = monitor;
 		this.numFloors = numFloors;
+		floorsToStopOn = new HashSet<>(numFloors);
+
 		currentFloor = 1;
-		destinationFloor = currentFloor;
 		elevatorState = waitingForPassengers;
+	}
+
+	void addFloorToStopOn(int destinationFloor)
+	{
+		if (elevatorState.isGoingUp && destinationFloor < currentFloor)
+			return;
+
+		if (elevatorState.isGoingDown && destinationFloor > currentFloor)
+			return;
+
+		floorsToStopOn.add(destinationFloor);
 	}
 
 	void openDoors()
@@ -31,38 +47,116 @@ public class Elevator
 		monitor.report("Open doors", elevatorNumber, currentFloor);
 	}
 
+	void closeDoors()
+	{
+		monitor.report("Close doors", elevatorNumber, currentFloor);
+	}
+
 	void changeState(ElevatorState newState)
 	{
+		// todo: Consolidate some of these cases.
 		switch(newState)
 		{
 			case waitingForPassengers:
 				switch(elevatorState)
 				{
 					case waitingForPassengers:
-						break;
 					case waitingForService:
+						// do nothing
 						break;
 					case movingUpWhileEmpty:
-						break;
 					case movingDownWhileEmpty:
-						break;
 					case movingUpWhileOccupied:
-						break;
 					case movingDownWhileOccupied:
+						closeDoors();
 						break;
 					default:
 						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
 				}
 				break;
 			case waitingForService:
+				switch(elevatorState)
+				{
+					case waitingForPassengers:
+					case waitingForService:
+						// do nothing
+						break;
+					case movingUpWhileEmpty:
+					case movingDownWhileEmpty:
+					case movingUpWhileOccupied:
+					case movingDownWhileOccupied:
+						throw new IllegalStateException("Elevator not allowed to move while in service.");
+					default:
+						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+				}
 				break;
 			case movingUpWhileEmpty:
+				switch(elevatorState)
+				{
+					case waitingForPassengers:
+					case waitingForService:
+						numTrips++;
+						openDoors();
+						break;
+					case movingUpWhileEmpty:
+					case movingDownWhileEmpty:
+					case movingUpWhileOccupied:
+					case movingDownWhileOccupied:
+						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
+					default:
+						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+				}
 				break;
 			case movingDownWhileEmpty:
+				switch(elevatorState)
+				{
+					case waitingForPassengers:
+					case waitingForService:
+						numTrips++;
+						openDoors();
+						break;
+					case movingUpWhileEmpty:
+					case movingDownWhileEmpty:
+					case movingUpWhileOccupied:
+					case movingDownWhileOccupied:
+						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
+					default:
+						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+				}
 				break;
 			case movingUpWhileOccupied:
+				switch(elevatorState)
+				{
+					case waitingForPassengers:
+					case waitingForService:
+						numTrips++;
+						openDoors();
+						break;
+					case movingUpWhileEmpty:
+					case movingDownWhileEmpty:
+					case movingUpWhileOccupied:
+					case movingDownWhileOccupied:
+						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
+					default:
+						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+				}
 				break;
 			case movingDownWhileOccupied:
+				switch(elevatorState)
+				{
+					case waitingForPassengers:
+					case waitingForService:
+						numTrips++;
+						openDoors();
+						break;
+					case movingUpWhileEmpty:
+					case movingDownWhileEmpty:
+					case movingUpWhileOccupied:
+					case movingDownWhileOccupied:
+						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
+					default:
+						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+				}
 				break;
 			default:
 				throw new IllegalStateException("Bug in code! Unhandled state: " + newState);
@@ -70,24 +164,31 @@ public class Elevator
 		elevatorState = newState;
 	}
 
+	// Elevators can only move during a tick event.
 	public void tick()
 	{
 		switch(elevatorState)
 		{
 			case waitingForPassengers:
 			case waitingForService:
+				if (!floorsToStopOn.isEmpty())
+				{
+					// todo: am I on the right floor?
+					// todo: do I need to go up?
+					// todo: do I need to go down?
+				}
 				break;
 			case movingUpWhileEmpty:
-				if (currentFloor == destinationFloor)
-					changeState(waitingForPassengers);
-				else if (currentFloor < destinationFloor)
-					currentFloor++;
+				// todo
 				break;
 			case movingDownWhileEmpty:
+				// todo
 				break;
 			case movingUpWhileOccupied:
+				// todo
 				break;
 			case movingDownWhileOccupied:
+				// todo
 				break;
 			default:
 				throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);

@@ -2,21 +2,27 @@ package elevator;
 
 public enum ElevatorState
 {
-	waitingForPassengers(true, false),
-	waitingForService(true, false),
-	movingUpWhileEmpty(false, false),
-	movingDownWhileEmpty(false, false),
-	movingUpWhileOccupied(false, true),
-	movingDownWhileOccupied(false, true);
+	waitingForPassengers(true, false, false, false),
+	waitingForService(true, false, false, false),
+	movingUpWhileEmpty(false, false, true, false),
+	movingDownWhileEmpty(false, false, false, true),
+	movingUpWhileOccupied(false, true, true, false),
+	movingDownWhileOccupied(false, true, false, true);
 
 	boolean doorsAreOpen;
 	boolean isOccupied;
+	boolean isGoingUp;
+	boolean isGoingDown;
 
 	ElevatorState(
 			boolean doorsAreOpen,
-			boolean isOccupied)
+			boolean isOccupied,
+			boolean isGoingUp,
+			boolean isGoingDown)
 	{
 		this.doorsAreOpen = doorsAreOpen;
 		this.isOccupied = isOccupied;
+		this.isGoingUp = isGoingUp;
+		this.isGoingDown = isGoingDown;
 	}
 }

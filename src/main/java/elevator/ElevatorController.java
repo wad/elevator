@@ -31,4 +31,16 @@ public class ElevatorController
 			elevator.tick();
 		timeCounter++;
 	}
+
+	public void callForRide(int toFloor)
+	{
+		// todo: figure out which elevator can answer
+		// todo: set that elevator's state, so that next tick it will react
+	}
+
+	public void riderRequest(int elevatorNumber, int toFloor)
+	{
+		// todo: figure out which elevator can answer
+		// todo: set that elevator's state, so that next tick it will react
+	}
 }

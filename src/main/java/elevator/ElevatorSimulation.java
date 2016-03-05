@@ -18,12 +18,12 @@ public class ElevatorSimulation
 
 	public void callForRide(int toFloor)
 	{
-
+		elevatorController.callForRide(toFloor);
 	}
 
 	public void riderRequest(int elevatorNumber, int toFloor)
 	{
-
+		elevatorController.riderRequest(elevatorNumber, toFloor);
 	}
 
 	public static void main(String... args)

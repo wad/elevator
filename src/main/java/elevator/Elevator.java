@@ -10,16 +10,11 @@ public class Elevator
 {
 	static final int MAX_TRIPS_BEFORE_SERVICE = 100;
 	static final int BOTTOM_FLOOR = 1;
-
 	final int numFloors;
 	final int elevatorNumber;
-
 	ElevatorState elevatorState;
 	int currentFloor;
-
-	// todo: Refactor this into its own class
 	Set<Integer> floorsToStopOn;
-
 	int numTripsSinceLastService = 0;
 	int totalNumTrips = 0;
 	int totalFloorsPassed = 0;
@@ -152,22 +147,6 @@ public class Elevator
 		switch (newState)
 		{
 			case waitingForPassengers:
-				switch (elevatorState)
-				{
-					case waitingForPassengers:
-					case waitingForService:
-						// do nothing
-						break;
-					case movingUpWhileEmpty:
-					case movingDownWhileEmpty:
-					case movingUpWhileOccupied:
-					case movingDownWhileOccupied:
-						closeDoors();
-						break;
-					default:
-						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
-				}
-				break;
 			case waitingForService:
 				switch (elevatorState)
 				{
@@ -179,60 +158,63 @@ public class Elevator
 					case movingDownWhileEmpty:
 					case movingUpWhileOccupied:
 					case movingDownWhileOccupied:
-						throw new IllegalStateException("Elevator not allowed to move while in service.");
+						openDoors();
+						break;
 					default:
 						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
 				}
 				break;
 			case movingUpWhileEmpty:
-				switch (elevatorState)
-				{
-					case waitingForPassengers:
-					case waitingForService:
-						incrementNumTrips();
-						openDoors();
-						break;
-					case movingUpWhileOccupied:
-						break;
-					case movingUpWhileEmpty:
-					case movingDownWhileEmpty:
-					case movingDownWhileOccupied:
-						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
-					default:
-						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
-				}
-				break;
 			case movingDownWhileEmpty:
 				switch (elevatorState)
 				{
 					case waitingForPassengers:
-					case waitingForService:
 						incrementNumTrips();
-						openDoors();
-						break;
-					case movingDownWhileOccupied:
+						closeDoors();
 						break;
 					case movingUpWhileEmpty:
-					case movingDownWhileEmpty:
 					case movingUpWhileOccupied:
+					case movingDownWhileEmpty:
+					case movingDownWhileOccupied:
+					case waitingForService:
 						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
 					default:
 						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
 				}
 				break;
 			case movingUpWhileOccupied:
+				switch (elevatorState)
+				{
+					case waitingForPassengers:
+						incrementNumTrips();
+						closeDoors();
+						break;
+					case movingUpWhileEmpty:
+						// someone inside pushed a button!
+						break;
+					case movingDownWhileEmpty:
+					case movingUpWhileOccupied:
+					case movingDownWhileOccupied:
+					case waitingForService:
+						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
+					default:
+						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+				}
+				break;
 			case movingDownWhileOccupied:
 				switch (elevatorState)
 				{
 					case waitingForPassengers:
-					case waitingForService:
 						incrementNumTrips();
-						openDoors();
+						closeDoors();
+						break;
+					case movingDownWhileEmpty:
+						// someone inside pushed a button!
 						break;
 					case movingUpWhileEmpty:
-					case movingDownWhileEmpty:
 					case movingUpWhileOccupied:
 					case movingDownWhileOccupied:
+					case waitingForService:
 						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
 					default:
 						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
@@ -323,14 +305,20 @@ public class Elevator
 			case movingUpWhileEmpty:
 			case movingUpWhileOccupied:
 				if (floorsToStopOn.contains(currentFloor))
+				{
+					floorsToStopOn.remove(currentFloor);
 					changeState(waitingForPassengers);
+				}
 				else
 					move(true);
 				break;
 			case movingDownWhileEmpty:
 			case movingDownWhileOccupied:
 				if (floorsToStopOn.contains(currentFloor))
+				{
+					floorsToStopOn.remove(currentFloor);
 					changeState(waitingForPassengers);
+				}
 				else
 					move(false);
 				break;
@@ -340,5 +328,23 @@ public class Elevator
 
 		// Blank this out at the end of each tick.
 		internalRequestReceivedSinceLastTick = false;
+
+		monitor.report("Elevator state " + elevatorState, elevatorNumber, currentFloor);
+	}
+
+	public void finalReport()
+	{
+		/*
+			int numTripsSinceLastService = 0;
+	int totalNumTrips = 0;
+	int totalFloorsPassed = 0;
+
+		 */
+		monitor.report(
+				"Final report:"
+						+ " numTripsSinceLastService=" + numTripsSinceLastService
+						+ " totalNumTrips=" + totalNumTrips
+						+ " totalFloorsPassed=" + totalFloorsPassed,
+				elevatorNumber);
 	}
 }

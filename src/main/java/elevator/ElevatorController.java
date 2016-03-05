@@ -92,4 +92,9 @@ public class ElevatorController
 		monitor.report("Service performed", elevatorNumber);
 		elevators.get(elevatorNumber).serviceIsComplete();
 	}
+
+	public void finalReport()
+	{
+		elevators.forEach(Elevator::finalReport);
+	}
 }

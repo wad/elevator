@@ -35,6 +35,11 @@ public class ElevatorSimulation
 		elevatorController.markServiceIsComplete(elevatorNumber);
 	}
 
+	public void finalReport()
+	{
+		elevatorController.finalReport();
+	}
+
 	public static void main(String... args)
 	{
 		System.out.println("First argument is how many elevators, second argument is how many floors.");
@@ -52,6 +57,16 @@ public class ElevatorSimulation
 		ElevatorSimulation sim = new ElevatorSimulation(numElevators, numFloors);
 		sim.tick();
 		sim.tick();
+		sim.riderRequest(1, 5);
 		sim.tick();
+		sim.tick();
+		sim.tick();
+		sim.tick();
+		sim.tick();
+		sim.tick();
+		sim.tick();
+		sim.tick();
+		sim.tick();
+		sim.finalReport();
 	}
 }

@@ -6,6 +6,7 @@ import java.util.List;
 public class ElevatorController
 {
 	int timeCounter = 0;
+	Monitor monitor = new Monitor();
 
 	List<Elevator> elevators;
 
@@ -21,12 +22,13 @@ public class ElevatorController
 
 		elevators = new ArrayList<>(numElevators);
 		for (int i = 0; i < numElevators; i++)
-			elevators.add(new Elevator(numFloors));
+			elevators.add(new Elevator(monitor, numFloors, i));
 	}
 
 	public void tick()
 	{
+		for (Elevator elevator : elevators)
+			elevator.tick();
 		timeCounter++;
-		// todo
 	}
 }

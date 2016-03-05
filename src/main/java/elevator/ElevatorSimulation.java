@@ -16,6 +16,16 @@ public class ElevatorSimulation
 		elevatorController.tick();
 	}
 
+	public void callForRide(int toFloor)
+	{
+
+	}
+
+	public void riderRequest(int elevatorNumber, int toFloor)
+	{
+
+	}
+
 	public static void main(String... args)
 	{
 		System.out.println("First argument is how many elevators, second argument is how many floors.");

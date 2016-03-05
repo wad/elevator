@@ -4,8 +4,10 @@ public enum ElevatorState
 {
 	waitingForPassengers(true, false),
 	waitingForService(true, false),
-	movingWhileEmpty(false, false),
-	movingPassengers(false, true);
+	movingUpWhileEmpty(false, false),
+	movingDownWhileEmpty(false, false),
+	movingUpWhileOccupied(false, true),
+	movingDownWhileOccupied(false, true);
 
 	boolean doorsAreOpen;
 	boolean isOccupied;

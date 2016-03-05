@@ -1,5 +1,6 @@
 package elevator;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -114,6 +115,20 @@ public class Elevator
 
 		int someFloorToStopOn = (int) floorsToStopOn.toArray()[0];
 		return someFloorToStopOn > currentFloor;
+	}
+
+	int getHighestFloorToStopOn()
+	{
+		if (floorsToStopOn.isEmpty())
+			throw new IllegalStateException("Bug in code! Need to verify there are floors to stop on before calling me.");
+		return Collections.max(floorsToStopOn);
+	}
+
+	int getLowestFloorToStopOn()
+	{
+		if (floorsToStopOn.isEmpty())
+			throw new IllegalStateException("Bug in code! Need to verify there are floors to stop on before calling me.");
+		return Collections.min(floorsToStopOn);
 	}
 
 	public void serviceIsComplete()
@@ -277,6 +292,76 @@ public class Elevator
 	{
 		numTripsSinceLastService++;
 		totalNumTrips++;
+	}
+
+	/**
+	 * These results could change, if riders push more buttons, so it's just minimum value.
+	 *
+	 * @return null if the elevator will not be able to respond.
+	 */
+	public Integer howManyFloorsAreYouFromBeingAbleToStopHere(int destinationFloor)
+	{
+		boolean destinationFloorIsAbove = destinationFloor > currentFloor;
+
+		switch (elevatorState)
+		{
+			case waitingForPassengers:
+				if (floorsToStopOn.isEmpty())
+					return destinationFloorIsAbove ? destinationFloor - currentFloor : currentFloor - destinationFloor;
+
+				if (shouldGoUp())
+				{
+					if (destinationFloorIsAbove)
+						return destinationFloor - currentFloor;
+
+					// It would need to go up, and then back down again.
+					int highestFloorToStopOn = getHighestFloorToStopOn();
+					int floorsToGoUp = highestFloorToStopOn - currentFloor;
+					int floorsToGoDown = highestFloorToStopOn - destinationFloor;
+					return floorsToGoUp + floorsToGoDown;
+				}
+				else
+				{
+					if (!destinationFloorIsAbove)
+						return currentFloor - destinationFloor;
+
+					// It would need to go down, and then back up again.
+					int lowestFloorToStopOn = getLowestFloorToStopOn();
+					int floorsToGoDown = currentFloor - lowestFloorToStopOn;
+					int floorsToGoUp = destinationFloor - lowestFloorToStopOn;
+					return floorsToGoDown + floorsToGoUp;
+				}
+			case waitingForService:
+				return null;
+			case movingUpWhileEmpty:
+			case movingUpWhileOccupied:
+			{
+				if (destinationFloorIsAbove)
+					return destinationFloor - currentFloor;
+
+				// assume we already have stopping floors, otherwise why is it moving?
+				// It would need to go up, and then back down again.
+				int highestFloorToStopOn = getHighestFloorToStopOn();
+				int floorsToGoUp = highestFloorToStopOn - currentFloor;
+				int floorsToGoDown = highestFloorToStopOn - destinationFloor;
+				return floorsToGoUp + floorsToGoDown;
+			}
+			case movingDownWhileEmpty:
+			case movingDownWhileOccupied:
+			{
+				if (!destinationFloorIsAbove)
+					return currentFloor - destinationFloor;
+
+				// assume we already have stopping floors, otherwise why is it moving?
+				// It would need to go down, and then back up again.
+				int lowestFloorToStopOn = getLowestFloorToStopOn();
+				int floorsToGoDown = currentFloor - lowestFloorToStopOn;
+				int floorsToGoUp = destinationFloor - lowestFloorToStopOn;
+				return floorsToGoDown + floorsToGoUp;
+			}
+			default:
+				throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+		}
 	}
 
 	// Elevators can only move during a tick event.

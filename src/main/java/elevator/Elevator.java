@@ -1,6 +1,7 @@
 package elevator;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 import static elevator.ElevatorState.*;
 
@@ -16,13 +17,19 @@ todo: handle case where all elevators are being serviced
 @SuppressWarnings("Duplicates")
 public class Elevator
 {
+	static final int MAX_TRIPS_BEFORE_SERVICE = 100;
+	static final int BOTTOM_FLOOR = 1;
+
 	final int numFloors;
 	final int elevatorNumber;
 
 	ElevatorState elevatorState;
 	int currentFloor;
 	Set<Integer> floorsToStopOn;
-	int numTrips = 0;
+
+	int numTripsSinceLastService = 0;
+	int totalNumTrips = 0;
+	int totalFloorsPassed = 0;
 
 	// todo: This is ugly. Find a better way to handle this logic.
 	boolean internalRequestReceivedSinceLastTick;
@@ -53,7 +60,7 @@ public class Elevator
 	public void internalFloorRequest(int destinationFloor)
 	{
 		// Let's fix the state if needed
-		switch(elevatorState)
+		switch (elevatorState)
 		{
 			case waitingForPassengers:
 			case waitingForService:
@@ -103,14 +110,17 @@ public class Elevator
 		if (floorsToStopOn.isEmpty())
 			throw new IllegalStateException("Bug in code! Need to verify there are floors to stop on before calling me.");
 
-		int someFloorToStopOn = (int)floorsToStopOn.toArray()[0];
+		int someFloorToStopOn = (int) floorsToStopOn.toArray()[0];
 		return someFloorToStopOn > currentFloor;
 	}
 
 	public void serviceIsComplete()
 	{
 		if (elevatorState == waitingForService)
+		{
+			numTripsSinceLastService = 0;
 			changeState(waitingForPassengers);
+		}
 	}
 
 	void openDoors()
@@ -123,13 +133,35 @@ public class Elevator
 		monitor.report("Close doors", elevatorNumber, currentFloor);
 	}
 
+	void moveUpOneFloor()
+	{
+		if (currentFloor == numFloors)
+			changeState(waitingForPassengers);
+		else
+		{
+			totalFloorsPassed++;
+			currentFloor++;
+		}
+	}
+
+	void moveDownOneFloor()
+	{
+		if (currentFloor == BOTTOM_FLOOR)
+			changeState(waitingForPassengers);
+		else
+		{
+			totalFloorsPassed++;
+			currentFloor--;
+		}
+	}
+
 	void changeState(ElevatorState newState)
 	{
 		// todo: Consolidate some of these cases.
-		switch(newState)
+		switch (newState)
 		{
 			case waitingForPassengers:
-				switch(elevatorState)
+				switch (elevatorState)
 				{
 					case waitingForPassengers:
 					case waitingForService:
@@ -146,7 +178,7 @@ public class Elevator
 				}
 				break;
 			case waitingForService:
-				switch(elevatorState)
+				switch (elevatorState)
 				{
 					case waitingForPassengers:
 					case waitingForService:
@@ -162,11 +194,11 @@ public class Elevator
 				}
 				break;
 			case movingUpWhileEmpty:
-				switch(elevatorState)
+				switch (elevatorState)
 				{
 					case waitingForPassengers:
 					case waitingForService:
-						numTrips++;
+						incrementNumTrips();
 						openDoors();
 						break;
 					case movingUpWhileEmpty:
@@ -179,11 +211,11 @@ public class Elevator
 				}
 				break;
 			case movingDownWhileEmpty:
-				switch(elevatorState)
+				switch (elevatorState)
 				{
 					case waitingForPassengers:
 					case waitingForService:
-						numTrips++;
+						incrementNumTrips();
 						openDoors();
 						break;
 					case movingUpWhileEmpty:
@@ -196,11 +228,11 @@ public class Elevator
 				}
 				break;
 			case movingUpWhileOccupied:
-				switch(elevatorState)
+				switch (elevatorState)
 				{
 					case waitingForPassengers:
 					case waitingForService:
-						numTrips++;
+						incrementNumTrips();
 						openDoors();
 						break;
 					case movingUpWhileEmpty:
@@ -213,11 +245,11 @@ public class Elevator
 				}
 				break;
 			case movingDownWhileOccupied:
-				switch(elevatorState)
+				switch (elevatorState)
 				{
 					case waitingForPassengers:
 					case waitingForService:
-						numTrips++;
+						incrementNumTrips();
 						openDoors();
 						break;
 					case movingUpWhileEmpty:
@@ -235,10 +267,16 @@ public class Elevator
 		elevatorState = newState;
 	}
 
+	void incrementNumTrips()
+	{
+		numTripsSinceLastService++;
+		totalNumTrips++;
+	}
+
 	// Elevators can only move during a tick event.
 	public void tick()
 	{
-		switch(elevatorState)
+		switch (elevatorState)
 		{
 			case waitingForPassengers:
 				boolean elevatorNeedsToMove = !floorsToStopOn.isEmpty();
@@ -246,24 +284,28 @@ public class Elevator
 				{
 					// It will actually move next tick. This tick just updates the state.
 					if (shouldGoUp())
-						changeState(internalRequestReceivedSinceLastTick ? ElevatorState.movingUpWhileOccupied : ElevatorState.movingUpWhileEmpty);
+						changeState(internalRequestReceivedSinceLastTick ? movingUpWhileOccupied : movingUpWhileEmpty);
 					else
-						changeState(internalRequestReceivedSinceLastTick ? ElevatorState.movingUpWhileOccupied : ElevatorState.movingUpWhileEmpty);
+						changeState(internalRequestReceivedSinceLastTick ? movingUpWhileOccupied : movingUpWhileEmpty);
 				}
+				else if (numTripsSinceLastService >= MAX_TRIPS_BEFORE_SERVICE)
+					changeState(waitingForService);
+				break;
 			case waitingForService:
-				// can't do anything until elevator is serviced
 				break;
 			case movingUpWhileEmpty:
-				// todo
+			case movingUpWhileOccupied:
+				if (floorsToStopOn.contains(currentFloor))
+					changeState(waitingForPassengers);
+				else
+					moveUpOneFloor();
 				break;
 			case movingDownWhileEmpty:
-				// todo
-				break;
-			case movingUpWhileOccupied:
-				// todo
-				break;
 			case movingDownWhileOccupied:
-				// todo
+				if (floorsToStopOn.contains(currentFloor))
+					changeState(waitingForPassengers);
+				else
+					moveDownOneFloor();
 				break;
 			default:
 				throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);

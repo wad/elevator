@@ -21,11 +21,11 @@ public class ElevatorController
 			throw new IllegalArgumentException("Need at least one elevator.");
 
 		if (numFloors < 2)
-			throw new IllegalArgumentException("Need at least two floors.");
+			throw new IllegalArgumentException("Need at least two floors. Otherwise, why have an elevator??");
 
 		elevators = new ArrayList<>(numElevators);
-		for (int i = 0; i < numElevators; i++)
-			elevators.add(new Elevator(monitor, numFloors, i));
+		for (int elevatorNumber = 0; elevatorNumber < numElevators; elevatorNumber++)
+			elevators.add(new Elevator(monitor, numFloors, elevatorNumber));
 
 		monitor.report("Elevator controller started with " + numElevators + " elevators and " + numFloors + " floors");
 	}
@@ -71,12 +71,10 @@ public class ElevatorController
 			monitor.report("No elevators can respond to call request. Will try again next tick.");
 			return false;
 		}
-		else
-		{
-			monitor.report("Elevator " + selectedElevatorNumber + " was selected to receive call request.");
-			elevators.get(selectedElevatorNumber).externalFloorRequest(elevatorCallRequest.getFromFloor());
-			return true;
-		}
+
+		monitor.report("Elevator " + selectedElevatorNumber + " was selected to receive call request.");
+		elevators.get(selectedElevatorNumber).externalFloorRequest(elevatorCallRequest.getFromFloor());
+		return true;
 	}
 
 	public void riderRequest(
@@ -90,7 +88,7 @@ public class ElevatorController
 	public void markServiceIsComplete(int elevatorNumber)
 	{
 		monitor.report("Service performed", elevatorNumber);
-		elevators.get(elevatorNumber).serviceIsComplete();
+		elevators.get(elevatorNumber).markServiceAsComplete();
 	}
 
 	public void finalReport()

@@ -13,4 +13,6 @@ public class ElevatorSimulationTest
 		Assert.assertEquals(3, elevatorSimulation.elevatorController.elevators.size());
 		Assert.assertEquals(10, elevatorSimulation.elevatorController.elevators.get(0).numFloors);
 	}
+
+	// todo: yeah, this is where you can write tests...
 }

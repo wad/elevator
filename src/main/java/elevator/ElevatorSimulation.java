@@ -40,20 +40,11 @@ public class ElevatorSimulation
 		elevatorController.finalReport();
 	}
 
+	// Sample run
 	public static void main(String... args)
 	{
-		System.out.println("First argument is how many elevators, second argument is how many floors.");
-
-		// Just some default values for convenience while developing
 		int numElevators = 3;
 		int numFloors = 10;
-
-		if (args.length == 2)
-		{
-			numElevators = Integer.parseInt(args[0]);
-			numFloors = Integer.parseInt(args[1]);
-		}
-
 		ElevatorSimulation sim = new ElevatorSimulation(numElevators, numFloors);
 		sim.tick();
 		sim.riderRequest(0, 10);
@@ -71,11 +62,12 @@ public class ElevatorSimulation
 		sim.tick();
 		sim.tick();
 		sim.finalReport();
+	}
+}
 
 /*
-Output for this run:
+Output for the sample run:
 
-/home/wad/apps/java/bin/java -Didea.launcher.port=7535 -Didea.launcher.bin.path=/home/wad/apps/idea-IU-143.1821.5/bin -Dfile.encoding=UTF-8 -classpath /home/wad/apps/java/jre/lib/jfr.jar:/home/wad/apps/java/jre/lib/jsse.jar:/home/wad/apps/java/jre/lib/javaws.jar:/home/wad/apps/java/jre/lib/management-agent.jar:/home/wad/apps/java/jre/lib/rt.jar:/home/wad/apps/java/jre/lib/deploy.jar:/home/wad/apps/java/jre/lib/plugin.jar:/home/wad/apps/java/jre/lib/charsets.jar:/home/wad/apps/java/jre/lib/jce.jar:/home/wad/apps/java/jre/lib/jfxswt.jar:/home/wad/apps/java/jre/lib/resources.jar:/home/wad/apps/java/jre/lib/ext/sunpkcs11.jar:/home/wad/apps/java/jre/lib/ext/jfxrt.jar:/home/wad/apps/java/jre/lib/ext/cldrdata.jar:/home/wad/apps/java/jre/lib/ext/sunec.jar:/home/wad/apps/java/jre/lib/ext/sunjce_provider.jar:/home/wad/apps/java/jre/lib/ext/localedata.jar:/home/wad/apps/java/jre/lib/ext/nashorn.jar:/home/wad/apps/java/jre/lib/ext/dnsns.jar:/home/wad/apps/java/jre/lib/ext/zipfs.jar:/home/wad/src/elevator/out/production/elevator:/home/wad/apps/idea-IU-143.1821.5/lib/idea_rt.jar com.intellij.rt.execution.application.AppMain elevator.ElevatorSimulation
 First argument is how many elevators, second argument is how many floors.
 Elevator controller started with 3 elevators and 10 floors
 tick 0
@@ -162,5 +154,3 @@ Elevator 0: Final report: numTripsSinceLastService=1 totalNumTrips=1 totalFloors
 Elevator 1: Final report: numTripsSinceLastService=1 totalNumTrips=1 totalFloorsPassed=4
 Elevator 2: Final report: numTripsSinceLastService=1 totalNumTrips=1 totalFloorsPassed=2
 */
-	}
-}

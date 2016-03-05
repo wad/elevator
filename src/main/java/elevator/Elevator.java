@@ -10,16 +10,19 @@ public class Elevator
 {
 	static final int MAX_TRIPS_BEFORE_SERVICE = 100;
 	static final int BOTTOM_FLOOR = 1;
+
 	final int numFloors;
 	final int elevatorNumber;
-	ElevatorState elevatorState;
+
 	int currentFloor;
+	ElevatorState currentElevatorState;
 	Set<Integer> floorsToStopOn;
+
 	int numTripsSinceLastService = 0;
 	int totalNumTrips = 0;
 	int totalFloorsPassed = 0;
 
-	// todo: This is ugly. Find a better way to handle this logic.
+	// This is so we can identify if an elevator that we thought was unoccupied, turns out to have someone in it.
 	boolean internalRequestReceivedSinceLastTick;
 
 	Monitor monitor;
@@ -35,20 +38,20 @@ public class Elevator
 		floorsToStopOn = new HashSet<>(numFloors);
 
 		currentFloor = 1;
-		elevatorState = waitingForPassengers;
+		currentElevatorState = waitingForPassengers;
 	}
 
-	// Someone pushed a button from outside
+	// Someone pushed a button from outside, to call this elevator
 	public void externalFloorRequest(int destinationFloor)
 	{
 		addFloorToStopOn(destinationFloor);
 	}
 
-	// Someone pushed a button from inside
+	// Someone pushed a button from inside the elevator
 	public void internalFloorRequest(int destinationFloor)
 	{
 		// Let's fix the state if needed
-		switch (elevatorState)
+		switch (currentElevatorState)
 		{
 			case waitingForPassengers:
 			case waitingForService:
@@ -56,13 +59,13 @@ public class Elevator
 			case movingDownWhileOccupied:
 				break;
 			case movingUpWhileEmpty:
-				elevatorState = movingUpWhileOccupied;
+				currentElevatorState = movingUpWhileOccupied;
 				break;
 			case movingDownWhileEmpty:
-				elevatorState = movingDownWhileOccupied;
+				currentElevatorState = movingDownWhileOccupied;
 				break;
 			default:
-				throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+				throw new IllegalStateException("Bug in code! Unhandled state: " + currentElevatorState);
 		}
 
 		internalRequestReceivedSinceLastTick = true;
@@ -71,14 +74,14 @@ public class Elevator
 
 	void addFloorToStopOn(int destinationFloor)
 	{
-		boolean elevatorIsStopped = !elevatorState.isGoingUp && !elevatorState.isGoingDown;
+		boolean elevatorIsStopped = !currentElevatorState.isGoingUp && !currentElevatorState.isGoingDown;
 		if (elevatorIsStopped && destinationFloor == currentFloor)
 			return;
 
-		if (elevatorState.isGoingUp && destinationFloor < currentFloor)
+		if (currentElevatorState.isGoingUp && destinationFloor < currentFloor)
 			return;
 
-		if (elevatorState.isGoingDown && destinationFloor > currentFloor)
+		if (currentElevatorState.isGoingDown && destinationFloor > currentFloor)
 			return;
 
 		// handle the case where the elevator is in a middle floor, and someone pushes buttons both above and below
@@ -93,18 +96,20 @@ public class Elevator
 		floorsToStopOn.add(destinationFloor);
 	}
 
+	// This will return TRUE if there are buttons pushed, inside the elevator, that are for floors above the current floor.
 	boolean elevatorWantsToGoUp()
 	{
 		if (floorsToStopOn.isEmpty())
 			throw new IllegalStateException("Bug in code! Need to verify there are floors to stop on before calling me.");
 
+		// Just get any stopping floor, because we won't allow stopping floors below the current floor.
 		int someFloorToStopOn = (int) floorsToStopOn.toArray()[0];
 		return someFloorToStopOn > currentFloor;
 	}
 
-	public void serviceIsComplete()
+	public void markServiceAsComplete()
 	{
-		if (elevatorState == waitingForService)
+		if (currentElevatorState == waitingForService)
 		{
 			numTripsSinceLastService = 0;
 			changeState(waitingForPassengers);
@@ -148,7 +153,7 @@ public class Elevator
 		{
 			case waitingForPassengers:
 			case waitingForService:
-				switch (elevatorState)
+				switch (currentElevatorState)
 				{
 					case waitingForPassengers:
 					case waitingForService:
@@ -161,12 +166,12 @@ public class Elevator
 						openDoors();
 						break;
 					default:
-						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+						throw new IllegalStateException("Bug in code! Unhandled state: " + currentElevatorState);
 				}
 				break;
 			case movingUpWhileEmpty:
 			case movingDownWhileEmpty:
-				switch (elevatorState)
+				switch (currentElevatorState)
 				{
 					case waitingForPassengers:
 						incrementNumTrips();
@@ -177,13 +182,13 @@ public class Elevator
 					case movingDownWhileEmpty:
 					case movingDownWhileOccupied:
 					case waitingForService:
-						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
+						throw new IllegalStateException("Bad state change. From " + currentElevatorState + " to " + newState);
 					default:
-						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+						throw new IllegalStateException("Bug in code! Unhandled state: " + currentElevatorState);
 				}
 				break;
 			case movingUpWhileOccupied:
-				switch (elevatorState)
+				switch (currentElevatorState)
 				{
 					case waitingForPassengers:
 						incrementNumTrips();
@@ -196,13 +201,13 @@ public class Elevator
 					case movingUpWhileOccupied:
 					case movingDownWhileOccupied:
 					case waitingForService:
-						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
+						throw new IllegalStateException("Bad state change. From " + currentElevatorState + " to " + newState);
 					default:
-						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+						throw new IllegalStateException("Bug in code! Unhandled state: " + currentElevatorState);
 				}
 				break;
 			case movingDownWhileOccupied:
-				switch (elevatorState)
+				switch (currentElevatorState)
 				{
 					case waitingForPassengers:
 						incrementNumTrips();
@@ -215,18 +220,18 @@ public class Elevator
 					case movingUpWhileOccupied:
 					case movingDownWhileOccupied:
 					case waitingForService:
-						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
+						throw new IllegalStateException("Bad state change. From " + currentElevatorState + " to " + newState);
 					default:
-						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+						throw new IllegalStateException("Bug in code! Unhandled state: " + currentElevatorState);
 				}
 				break;
 			default:
 				throw new IllegalStateException("Bug in code! Unhandled state: " + newState);
 		}
 
-		monitor.report("Changed state from " + elevatorState + " to " + newState, elevatorNumber, currentFloor);
+		monitor.report("Changed state from " + currentElevatorState + " to " + newState, elevatorNumber, currentFloor);
 
-		elevatorState = newState;
+		currentElevatorState = newState;
 	}
 
 	void incrementNumTrips()
@@ -243,7 +248,7 @@ public class Elevator
 
 		boolean destinationFloorIsAbove = destinationFloor > currentFloor;
 
-		switch (elevatorState)
+		switch (currentElevatorState)
 		{
 			case waitingForPassengers:
 				if (floorsToStopOn.isEmpty())
@@ -278,14 +283,14 @@ public class Elevator
 				return currentFloor - destinationFloor;
 			}
 			default:
-				throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+				throw new IllegalStateException("Bug in code! Unhandled state: " + currentElevatorState);
 		}
 	}
 
 	// Elevators can only move during a tick event.
 	public void tick()
 	{
-		switch (elevatorState)
+		switch (currentElevatorState)
 		{
 			case waitingForPassengers:
 				boolean elevatorNeedsToMove = !floorsToStopOn.isEmpty();
@@ -323,23 +328,17 @@ public class Elevator
 					move(false);
 				break;
 			default:
-				throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
+				throw new IllegalStateException("Bug in code! Unhandled state: " + currentElevatorState);
 		}
 
 		// Blank this out at the end of each tick.
 		internalRequestReceivedSinceLastTick = false;
 
-		monitor.report("Elevator state " + elevatorState, elevatorNumber, currentFloor);
+		monitor.report("Elevator state " + currentElevatorState, elevatorNumber, currentFloor);
 	}
 
 	public void finalReport()
 	{
-		/*
-			int numTripsSinceLastService = 0;
-	int totalNumTrips = 0;
-	int totalFloorsPassed = 0;
-
-		 */
 		monitor.report(
 				"Final report:"
 						+ " numTripsSinceLastService=" + numTripsSinceLastService

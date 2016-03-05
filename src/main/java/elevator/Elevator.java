@@ -6,7 +6,6 @@ import java.util.Set;
 import static elevator.ElevatorState.*;
 
 /*
-
 Notes:
 You can't really tell if an elevator is occupied or not. So it just guesses.
 
@@ -19,6 +18,9 @@ public class Elevator
 {
 	static final int MAX_TRIPS_BEFORE_SERVICE = 100;
 	static final int BOTTOM_FLOOR = 1;
+
+	static final int UP = 1;
+	static final int DOWN = -1;
 
 	final int numFloors;
 	final int elevatorNumber;
@@ -133,26 +135,27 @@ public class Elevator
 		monitor.report("Close doors", elevatorNumber, currentFloor);
 	}
 
-	void moveUpOneFloor()
+	void move(int direction)
 	{
-		if (currentFloor == numFloors)
-			changeState(waitingForPassengers);
-		else
-		{
-			totalFloorsPassed++;
-			currentFloor++;
-		}
-	}
+		boolean goingUp = direction == UP;
 
-	void moveDownOneFloor()
-	{
-		if (currentFloor == BOTTOM_FLOOR)
-			changeState(waitingForPassengers);
-		else
+		if (goingUp && currentFloor == numFloors)
 		{
-			totalFloorsPassed++;
-			currentFloor--;
+			changeState(waitingForPassengers);
+			return;
 		}
+
+		if (!goingUp && currentFloor == BOTTOM_FLOOR)
+		{
+			changeState(waitingForPassengers);
+			return;
+		}
+
+		int newCurrentFloor = currentFloor + direction;
+		monitor.report("Moved " + (goingUp ? "up" : "down") + " one level to floor " + newCurrentFloor, elevatorNumber, currentFloor);
+
+		totalFloorsPassed++;
+		currentFloor = newCurrentFloor;
 	}
 
 	void changeState(ElevatorState newState)
@@ -264,6 +267,9 @@ public class Elevator
 			default:
 				throw new IllegalStateException("Bug in code! Unhandled state: " + newState);
 		}
+
+		monitor.report("Changed state from " + elevatorState + " to " + newState, elevatorNumber, currentFloor);
+
 		elevatorState = newState;
 	}
 
@@ -298,14 +304,14 @@ public class Elevator
 				if (floorsToStopOn.contains(currentFloor))
 					changeState(waitingForPassengers);
 				else
-					moveUpOneFloor();
+					move(UP);
 				break;
 			case movingDownWhileEmpty:
 			case movingDownWhileOccupied:
 				if (floorsToStopOn.contains(currentFloor))
 					changeState(waitingForPassengers);
 				else
-					moveDownOneFloor();
+					move(DOWN);
 				break;
 			default:
 				throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);

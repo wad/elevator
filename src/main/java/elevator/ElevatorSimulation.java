@@ -16,14 +16,23 @@ public class ElevatorSimulation
 		elevatorController.tick();
 	}
 
-	public void callForRide(int toFloor)
+	public void callForRide(
+			int fromFloor,
+			boolean wantsToGoUp)
 	{
-		elevatorController.callForRide(toFloor);
+		elevatorController.callForRide(fromFloor, wantsToGoUp);
 	}
 
-	public void riderRequest(int elevatorNumber, int toFloor)
+	public void riderRequest(
+			int elevatorNumber,
+			int toFloor)
 	{
 		elevatorController.riderRequest(elevatorNumber, toFloor);
+	}
+
+	public void performService(int elevatorNumber)
+	{
+		elevatorController.markServiceIsComplete(elevatorNumber);
 	}
 
 	public static void main(String... args)
@@ -40,6 +49,9 @@ public class ElevatorSimulation
 			numFloors = Integer.parseInt(args[1]);
 		}
 
-		ElevatorSimulation elevatorSimulation = new ElevatorSimulation(numElevators, numFloors);
+		ElevatorSimulation sim = new ElevatorSimulation(numElevators, numFloors);
+		sim.tick();
+		sim.tick();
+		sim.tick();
 	}
 }

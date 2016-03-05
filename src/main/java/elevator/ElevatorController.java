@@ -23,29 +23,42 @@ public class ElevatorController
 		elevators = new ArrayList<>(numElevators);
 		for (int i = 0; i < numElevators; i++)
 			elevators.add(new Elevator(monitor, numFloors, i));
+
+		monitor.report("Elevator controller started with " + numElevators + " elevators and " + numFloors + " floors");
 	}
 
 	public void tick()
 	{
+		monitor.report("tick " + timeCounter);
+
 		for (Elevator elevator : elevators)
 			elevator.tick();
 		timeCounter++;
 	}
 
-	public void callForRide(int toFloor)
+	public void callForRide(
+			int fromFloor,
+			boolean wantsToGoUp)
 	{
+		monitor.report("Person on floor " + fromFloor + " pushed the " + (wantsToGoUp ? "up" : "down") + " button");
+
 		// todo: figure out which elevator can answer
 		// todo: set that elevator's state, so that next tick it will react
 	}
 
-	public void riderRequest(int elevatorNumber, int toFloor)
+	public void riderRequest(
+			int elevatorNumber,
+			int toFloor)
 	{
+		monitor.report("Rider in elevator " + elevatorNumber + " pushed floor button " + toFloor);
+
 		// todo: figure out which elevator can answer
 		// todo: set that elevator's state, so that next tick it will react
 	}
 
 	public void markServiceIsComplete(int elevatorNumber)
 	{
+		monitor.report("Service performed", elevatorNumber);
 		elevators.get(elevatorNumber).serviceIsComplete();
 	}
 }

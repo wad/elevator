@@ -43,4 +43,9 @@ public class ElevatorController
 		// todo: figure out which elevator can answer
 		// todo: set that elevator's state, so that next tick it will react
 	}
+
+	public void markServiceIsComplete(int elevatorNumber)
+	{
+		elevators.get(elevatorNumber).serviceIsComplete();
+	}
 }

@@ -20,7 +20,7 @@ public class ElevatorSimulation
 			int fromFloor,
 			boolean wantsToGoUp)
 	{
-		elevatorController.callForRide(fromFloor, wantsToGoUp);
+		elevatorController.addRequest(new ElevatorCallRequest(fromFloor, wantsToGoUp));
 	}
 
 	public void riderRequest(

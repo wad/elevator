@@ -3,12 +3,15 @@ package elevator;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.stream.Collectors.toList;
+
 public class ElevatorController
 {
 	int timeCounter = 0;
 	Monitor monitor = new Monitor();
 
 	List<Elevator> elevators;
+	List<ElevatorCallRequest> pendingRequests = new ArrayList<>();
 
 	public ElevatorController(
 			int numElevators,
@@ -30,20 +33,50 @@ public class ElevatorController
 	public void tick()
 	{
 		monitor.report("tick " + timeCounter);
-
-		for (Elevator elevator : elevators)
-			elevator.tick();
+		handleRequests();
+		elevators.forEach(Elevator::tick);
 		timeCounter++;
 	}
 
-	public void callForRide(
-			int fromFloor,
-			boolean wantsToGoUp)
+	void handleRequests()
 	{
-		monitor.report("Person on floor " + fromFloor + " pushed the " + (wantsToGoUp ? "up" : "down") + " button");
+		pendingRequests = pendingRequests
+				.stream()
+				.filter(request -> !handleRequest(request))
+				.collect(toList());
+	}
 
-		// todo: figure out which elevator can answer
-		// todo: set that elevator's state, so that next tick it will react
+	public void addRequest(ElevatorCallRequest elevatorCallRequest)
+	{
+		monitor.report("Adding request: Person on floor " + elevatorCallRequest.getFromFloor() + " pushed the " + (elevatorCallRequest.wantsToGoUp() ? "up" : "down") + " button");
+		pendingRequests.add(elevatorCallRequest);
+	}
+
+	// return true if the request was handled
+	boolean handleRequest(ElevatorCallRequest elevatorCallRequest)
+	{
+		monitor.report("Handling request: Person on floor " + elevatorCallRequest.getFromFloor() + " pushed the " + (elevatorCallRequest.wantsToGoUp() ? "up" : "down") + " button");
+
+		int smallestNumFloorsAway = Integer.MAX_VALUE;
+		Integer selectedElevatorNumber = null;
+		for (Elevator elevator : elevators)
+		{
+			Integer numFloorsToMove = elevator.howManyFloorsAreYouFromBeingAbleToStopHere(elevatorCallRequest);
+			if (numFloorsToMove != null && numFloorsToMove < smallestNumFloorsAway)
+				selectedElevatorNumber = elevator.elevatorNumber;
+		}
+
+		if (selectedElevatorNumber == null)
+		{
+			monitor.report("No elevators can respond to call request. Will try again next tick.");
+			return false;
+		}
+		else
+		{
+			monitor.report("Elevator " + selectedElevatorNumber + " was selected to receive call request.");
+			elevators.get(selectedElevatorNumber).externalFloorRequest(elevatorCallRequest.getFromFloor());
+			return true;
+		}
 	}
 
 	public void riderRequest(
@@ -51,9 +84,7 @@ public class ElevatorController
 			int toFloor)
 	{
 		monitor.report("Rider in elevator " + elevatorNumber + " pushed floor button " + toFloor);
-
-		// todo: figure out which elevator can answer
-		// todo: set that elevator's state, so that next tick it will react
+		elevators.get(elevatorNumber).internalFloorRequest(toFloor);
 	}
 
 	public void markServiceIsComplete(int elevatorNumber)

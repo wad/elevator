@@ -1,18 +1,9 @@
 package elevator;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 import static elevator.ElevatorState.*;
-
-/*
-Notes:
-You can't really tell if an elevator is occupied or not. So it just guesses.
-
-todo: handle up/down external buttons
-todo: handle case where all elevators are being serviced
- */
 
 @SuppressWarnings("Duplicates")
 public class Elevator
@@ -20,14 +11,13 @@ public class Elevator
 	static final int MAX_TRIPS_BEFORE_SERVICE = 100;
 	static final int BOTTOM_FLOOR = 1;
 
-	static final int UP = 1;
-	static final int DOWN = -1;
-
 	final int numFloors;
 	final int elevatorNumber;
 
 	ElevatorState elevatorState;
 	int currentFloor;
+
+	// todo: Refactor this into its own class
 	Set<Integer> floorsToStopOn;
 
 	int numTripsSinceLastService = 0;
@@ -100,7 +90,7 @@ public class Elevator
 		if (!floorsToStopOn.isEmpty())
 		{
 			boolean selectedFloorIsAboveCurrentFloor = destinationFloor > currentFloor;
-			boolean shouldDiscardRequest = shouldGoUp() != selectedFloorIsAboveCurrentFloor;
+			boolean shouldDiscardRequest = elevatorWantsToGoUp() != selectedFloorIsAboveCurrentFloor;
 			if (shouldDiscardRequest)
 				return;
 		}
@@ -108,27 +98,13 @@ public class Elevator
 		floorsToStopOn.add(destinationFloor);
 	}
 
-	boolean shouldGoUp()
+	boolean elevatorWantsToGoUp()
 	{
 		if (floorsToStopOn.isEmpty())
 			throw new IllegalStateException("Bug in code! Need to verify there are floors to stop on before calling me.");
 
 		int someFloorToStopOn = (int) floorsToStopOn.toArray()[0];
 		return someFloorToStopOn > currentFloor;
-	}
-
-	int getHighestFloorToStopOn()
-	{
-		if (floorsToStopOn.isEmpty())
-			throw new IllegalStateException("Bug in code! Need to verify there are floors to stop on before calling me.");
-		return Collections.max(floorsToStopOn);
-	}
-
-	int getLowestFloorToStopOn()
-	{
-		if (floorsToStopOn.isEmpty())
-			throw new IllegalStateException("Bug in code! Need to verify there are floors to stop on before calling me.");
-		return Collections.min(floorsToStopOn);
 	}
 
 	public void serviceIsComplete()
@@ -150,10 +126,8 @@ public class Elevator
 		monitor.report("Close doors", elevatorNumber, currentFloor);
 	}
 
-	void move(int direction)
+	void move(boolean goingUp)
 	{
-		boolean goingUp = direction == UP;
-
 		if (goingUp && currentFloor == numFloors)
 		{
 			changeState(waitingForPassengers);
@@ -166,7 +140,7 @@ public class Elevator
 			return;
 		}
 
-		int newCurrentFloor = currentFloor + direction;
+		int newCurrentFloor = currentFloor + (goingUp ? 1 : -1);
 		monitor.report("Moved " + (goingUp ? "up" : "down") + " one level to floor " + newCurrentFloor, elevatorNumber, currentFloor);
 
 		totalFloorsPassed++;
@@ -175,7 +149,6 @@ public class Elevator
 
 	void changeState(ElevatorState newState)
 	{
-		// todo: Consolidate some of these cases.
 		switch (newState)
 		{
 			case waitingForPassengers:
@@ -219,9 +192,10 @@ public class Elevator
 						incrementNumTrips();
 						openDoors();
 						break;
+					case movingUpWhileOccupied:
+						break;
 					case movingUpWhileEmpty:
 					case movingDownWhileEmpty:
-					case movingUpWhileOccupied:
 					case movingDownWhileOccupied:
 						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
 					default:
@@ -236,32 +210,17 @@ public class Elevator
 						incrementNumTrips();
 						openDoors();
 						break;
+					case movingDownWhileOccupied:
+						break;
 					case movingUpWhileEmpty:
 					case movingDownWhileEmpty:
 					case movingUpWhileOccupied:
-					case movingDownWhileOccupied:
 						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
 					default:
 						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
 				}
 				break;
 			case movingUpWhileOccupied:
-				switch (elevatorState)
-				{
-					case waitingForPassengers:
-					case waitingForService:
-						incrementNumTrips();
-						openDoors();
-						break;
-					case movingUpWhileEmpty:
-					case movingDownWhileEmpty:
-					case movingUpWhileOccupied:
-					case movingDownWhileOccupied:
-						throw new IllegalStateException("Bad state change. From " + elevatorState + " to " + newState);
-					default:
-						throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
-				}
-				break;
 			case movingDownWhileOccupied:
 				switch (elevatorState)
 				{
@@ -294,13 +253,12 @@ public class Elevator
 		totalNumTrips++;
 	}
 
-	/**
-	 * These results could change, if riders push more buttons, so it's just minimum value.
-	 *
-	 * @return null if the elevator will not be able to respond.
-	 */
-	public Integer howManyFloorsAreYouFromBeingAbleToStopHere(int destinationFloor)
+	// return null if the elevator will not be able to respond.
+	public Integer howManyFloorsAreYouFromBeingAbleToStopHere(ElevatorCallRequest elevatorCallRequest)
 	{
+		int destinationFloor = elevatorCallRequest.getFromFloor();
+		boolean riderWantsToGoUp = elevatorCallRequest.wantsToGoUp();
+
 		boolean destinationFloorIsAbove = destinationFloor > currentFloor;
 
 		switch (elevatorState)
@@ -309,55 +267,33 @@ public class Elevator
 				if (floorsToStopOn.isEmpty())
 					return destinationFloorIsAbove ? destinationFloor - currentFloor : currentFloor - destinationFloor;
 
-				if (shouldGoUp())
+				if (elevatorWantsToGoUp())
 				{
-					if (destinationFloorIsAbove)
-						return destinationFloor - currentFloor;
-
-					// It would need to go up, and then back down again.
-					int highestFloorToStopOn = getHighestFloorToStopOn();
-					int floorsToGoUp = highestFloorToStopOn - currentFloor;
-					int floorsToGoDown = highestFloorToStopOn - destinationFloor;
-					return floorsToGoUp + floorsToGoDown;
+					if (!destinationFloorIsAbove || !riderWantsToGoUp)
+						return null;
+					return destinationFloor - currentFloor;
 				}
 				else
 				{
-					if (!destinationFloorIsAbove)
-						return currentFloor - destinationFloor;
-
-					// It would need to go down, and then back up again.
-					int lowestFloorToStopOn = getLowestFloorToStopOn();
-					int floorsToGoDown = currentFloor - lowestFloorToStopOn;
-					int floorsToGoUp = destinationFloor - lowestFloorToStopOn;
-					return floorsToGoDown + floorsToGoUp;
+					if (destinationFloorIsAbove || riderWantsToGoUp)
+						return null;
+					return currentFloor - destinationFloor;
 				}
 			case waitingForService:
 				return null;
 			case movingUpWhileEmpty:
 			case movingUpWhileOccupied:
 			{
-				if (destinationFloorIsAbove)
-					return destinationFloor - currentFloor;
-
-				// assume we already have stopping floors, otherwise why is it moving?
-				// It would need to go up, and then back down again.
-				int highestFloorToStopOn = getHighestFloorToStopOn();
-				int floorsToGoUp = highestFloorToStopOn - currentFloor;
-				int floorsToGoDown = highestFloorToStopOn - destinationFloor;
-				return floorsToGoUp + floorsToGoDown;
+				if (!destinationFloorIsAbove || !riderWantsToGoUp)
+					return null;
+				return destinationFloor - currentFloor;
 			}
 			case movingDownWhileEmpty:
 			case movingDownWhileOccupied:
 			{
-				if (!destinationFloorIsAbove)
-					return currentFloor - destinationFloor;
-
-				// assume we already have stopping floors, otherwise why is it moving?
-				// It would need to go down, and then back up again.
-				int lowestFloorToStopOn = getLowestFloorToStopOn();
-				int floorsToGoDown = currentFloor - lowestFloorToStopOn;
-				int floorsToGoUp = destinationFloor - lowestFloorToStopOn;
-				return floorsToGoDown + floorsToGoUp;
+				if (destinationFloorIsAbove || riderWantsToGoUp)
+					return null;
+				return currentFloor - destinationFloor;
 			}
 			default:
 				throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
@@ -374,7 +310,7 @@ public class Elevator
 				if (elevatorNeedsToMove)
 				{
 					// It will actually move next tick. This tick just updates the state.
-					if (shouldGoUp())
+					if (elevatorWantsToGoUp())
 						changeState(internalRequestReceivedSinceLastTick ? movingUpWhileOccupied : movingUpWhileEmpty);
 					else
 						changeState(internalRequestReceivedSinceLastTick ? movingUpWhileOccupied : movingUpWhileEmpty);
@@ -389,14 +325,14 @@ public class Elevator
 				if (floorsToStopOn.contains(currentFloor))
 					changeState(waitingForPassengers);
 				else
-					move(UP);
+					move(true);
 				break;
 			case movingDownWhileEmpty:
 			case movingDownWhileOccupied:
 				if (floorsToStopOn.contains(currentFloor))
 					changeState(waitingForPassengers);
 				else
-					move(DOWN);
+					move(false);
 				break;
 			default:
 				throw new IllegalStateException("Bug in code! Unhandled state: " + elevatorState);
